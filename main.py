@@ -63,7 +63,7 @@ def save_results(nodes: List[Node], iteration: int) -> None:
 
 def main():
     # シミュレーションのパラメータ
-    num_simulations = 3  # シミュレーション回数
+    num_simulations = 2  # シミュレーション回数
 
     for sim in range(num_simulations):
         print(f"Starting simulation {sim + 1}")
@@ -85,6 +85,7 @@ def main():
         # 4. タイトルランクを更新
         for node in nodes:
             node.update_title_rank()
+            node.activate()
             
         # 5. ボーナスを計算
         calculate_all_bonuses(nodes)
