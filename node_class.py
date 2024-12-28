@@ -254,4 +254,5 @@ class Node:
                     total_bonus_point=int(row['total_bonus_point'])
                 )
                 nodes.append(node)
+        print(f"{filename}_load完了")
         return nodes
