@@ -79,7 +79,14 @@ if __name__ == "__main__":
     for root in root_nodes:
         update_tree_numbers(root)
     
-    # 4. CSVファイルに保存
+    #4. アクティブなノードのみバイナリーのサイズを計算する。
+    for node in nodes:
+        if not node.active:
+            continue
+
+        node.calculate_binary_numbers()
+    
+    # 5. CSVファイルに保存
     Node.save_to_csv(nodes, "nodes.csv")
     
     print("Nodes created and saved to nodes.csv")
