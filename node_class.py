@@ -1,7 +1,6 @@
-import csv
 from dataclasses import dataclass, field
 from typing import Optional, List
-import random
+import csv
 
 @dataclass
 class Node:
@@ -18,6 +17,61 @@ class Node:
     total_paid_point: int = 0
     total_bonus_point: int = 0
     children: List['Node'] = field(default_factory=list)
+    # 新しい変数を追加
+    binary_number_1: int = 0
+    binary_number_3: int = 0
+    binary_number_5: int = 0
+    binary_number_7: int = 0
+
+    def process_bank_number(self, node1: 'Node', node2: 'Node') -> None:
+        """bank_number処理を実行"""
+        if not node1 or not node2:
+            return
+            
+        tree1 = node1.tree_number
+        tree2 = node2.tree_number
+        
+        if tree1 != tree2:
+            # bank_numberを使って tree_number を調整
+            while self.bank_number > 0 and tree2 < tree1:
+                tree2 += 1
+                self.bank_number -= 1
+                
+            # 差分をbank_numberに貯蔵（最大2まで）
+            diff = min(tree1 - tree2, 2)
+            if diff > 0:
+                self.bank_number = min(self.bank_number + diff, 2)
+
+    def calculate_binary_numbers(self) -> None:
+        """バイナリーの大きさを計算"""
+        active_children = sorted(
+            [child for child in self.children if child.active],
+            key=lambda x: x.tree_number,
+            reverse=True
+        )
+        
+        if not active_children:
+            return
+
+        if self.position_number >= 1 and len(active_children) >= 2:
+            node1, node2 = active_children[0:2]
+            self.binary_number_1 = (min(node1.tree_number, node2.tree_number) - 1) * 2
+            self.process_bank_number(node1, node2)
+
+        if self.position_number >= 3 and len(active_children) >= 4:
+            node3, node4 = active_children[2:4]
+            self.binary_number_3 = (min(node3.tree_number, node4.tree_number) - 1) * 2
+            self.process_bank_number(node3, node4)
+
+        if self.position_number >= 5 and len(active_children) >= 6:
+            node5, node6 = active_children[4:6]
+            self.binary_number_5 = (min(node5.tree_number, node6.tree_number) - 1) * 2
+            self.process_bank_number(node5, node6)
+
+        if self.position_number >= 7 and len(active_children) >= 8:
+            node7, node8 = active_children[6:8]
+            self.binary_number_7 = (min(node7.tree_number, node8.tree_number) - 1) * 2
+            self.process_bank_number(node7, node8)
 
     def activate(self) -> None:
         """ノードをアクティブ化し、必要なポイントを支払う"""
@@ -59,30 +113,56 @@ class Node:
                 self.title_rank = rank
 
     def calculate_bonus1(self) -> int:
-        """ボーナス1の計算"""
-        tree_size = self.calculate_tree_number() - 1  # 親ノードを除く
-        if 4 <= tree_size <= 60:
-            return 3000
-        elif 64 <= tree_size <= 200:
-            return 4000
-        elif 204 <= tree_size <= 2000:
-            return 5000
-        elif 2004 <= tree_size <= 20000:
-            return 2000
-        return 0
+        """更新されたボーナス1の計算"""
+        def calculate_bonus_for_binary(binary_number: int) -> float:
+            if 4 <= binary_number <= 60:
+                return 3000 * binary_number / 4
+            elif 64 <= binary_number <= 200:
+                return 3000 * 15 + 4000 * (binary_number - 60) / 4
+            elif 204 <= binary_number <= 2000:
+                return 3000 * 15 + 4000 * 35 + 5000 * (binary_number - 200) / 4
+            elif 2004 <= binary_number <= 20000:
+                return 3000 * 15 + 4000 * 35 + 5000 * 450 + 2000 * (binary_number - 2000) / 4
+            elif binary_number > 20000:
+                return 3000 * 15 + 4000 * 35 + 5000 * 450 + 2000 * 4500
+            return 0
+
+        bonus = 0
+        if self.position_number >= 1:
+            bonus += calculate_bonus_for_binary(self.binary_number_1)
+        if self.position_number >= 3:
+            bonus += calculate_bonus_for_binary(self.binary_number_3)
+        if self.position_number >= 5:
+            bonus += calculate_bonus_for_binary(self.binary_number_5)
+        if self.position_number >= 7:
+            bonus += calculate_bonus_for_binary(self.binary_number_7)
+            
+        return int(bonus)
 
     def calculate_bonus2(self) -> int:
-        """ボーナス2の計算"""
-        tree_size = self.calculate_tree_number()
-        if tree_size == 4:
-            return 10000
-        elif tree_size == 8:
-            return 7000
-        elif tree_size == 12:
-            return 4000
-        elif tree_size == 16:
-            return 1000
-        return 0
+        """更新されたボーナス2の計算"""
+        def calculate_bonus_for_binary(binary_number: int) -> int:
+            if binary_number == 4:
+                return 10000
+            elif binary_number == 8:
+                return 7000
+            elif binary_number == 12:
+                return 4000
+            elif binary_number == 16:
+                return 1000
+            return 0
+
+        bonus = 0
+        if self.position_number >= 1:
+            bonus += calculate_bonus_for_binary(self.binary_number_1)
+        if self.position_number >= 3:
+            bonus += calculate_bonus_for_binary(self.binary_number_3)
+        if self.position_number >= 5:
+            bonus += calculate_bonus_for_binary(self.binary_number_5)
+        if self.position_number >= 7:
+            bonus += calculate_bonus_for_binary(self.binary_number_7)
+            
+        return bonus
 
     def calculate_bonus3(self) -> int:
         """ボーナス3の計算"""
@@ -216,25 +296,28 @@ class Node:
 
     @classmethod
     def save_to_csv(cls, nodes: List['Node'], filename: str) -> None:
-        """ノードをCSVファイルに保存"""
+        """更新されたCSV保存機能"""
         with open(filename, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
                 'name', 'position_number', 'bank_number', 'active',
                 'parent_node', 'tree_number', 'title_rank', 'past_title_rank',
-                'paid_point', 'bonus_point', 'total_paid_point', 'total_bonus_point'
+                'paid_point', 'bonus_point', 'total_paid_point', 'total_bonus_point',
+                'binary_number_1', 'binary_number_3', 'binary_number_5', 'binary_number_7'
             ])
             for node in nodes:
                 writer.writerow([
                     node.name, node.position_number, node.bank_number,
                     node.active, node.parent_node, node.tree_number,
                     node.title_rank, node.past_title_rank, node.paid_point,
-                    node.bonus_point, node.total_paid_point, node.total_bonus_point
+                    node.bonus_point, node.total_paid_point, node.total_bonus_point,
+                    node.binary_number_1, node.binary_number_3, node.binary_number_5,
+                    node.binary_number_7
                 ])
 
     @classmethod
     def load_from_csv(cls, filename: str) -> List['Node']:
-        """CSVファイルからノードを読み込み"""
+        """更新されたCSV読み込み機能"""
         nodes = []
         with open(filename, 'r') as f:
             reader = csv.DictReader(f)
@@ -251,8 +334,11 @@ class Node:
                     paid_point=int(row['paid_point']),
                     bonus_point=int(row['bonus_point']),
                     total_paid_point=int(row['total_paid_point']),
-                    total_bonus_point=int(row['total_bonus_point'])
+                    total_bonus_point=int(row['total_bonus_point']),
+                    binary_number_1=int(row['binary_number_1']),
+                    binary_number_3=int(row['binary_number_3']),
+                    binary_number_5=int(row['binary_number_5']),
+                    binary_number_7=int(row['binary_number_7'])
                 )
                 nodes.append(node)
-        print(f"{filename}_load完了")
         return nodes
