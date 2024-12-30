@@ -4,11 +4,9 @@ from node_class import Node
 
 def build_node_hierarchy(nodes: List[Node]) -> List[Node]:
     """ノードの親子関係を構築し、ルートノードのリストを返す"""
-    # ノードをname->nodeの辞書に変換
     node_dict = {node.name: node for node in nodes}
     root_nodes = []
 
-    # 親子関係を構築
     for node in nodes:
         if node.parent_node:
             if node.parent_node in node_dict:
@@ -28,6 +26,9 @@ def calculate_all_bonuses(nodes: List[Node]) -> None:
     for node in nodes:
         if not node.active:
             continue
+
+        # binary numbersの計算を追加
+        node.calculate_binary_numbers()
 
         # ボーナス1-5の計算
         bonus1 = node.calculate_bonus1()
@@ -63,17 +64,13 @@ def save_results(nodes: List[Node], iteration: int) -> None:
 
 def main():
     # シミュレーションのパラメータ
-    num_simulations = 2  # シミュレーション回数
+    num_simulations = 3  # シミュレーション回数
 
     for sim in range(num_simulations):
         print(f"Starting simulation {sim + 1}")
         
-        if sim == 0:
-            csv_name = "nodes.csv"
-        else:
-            csv_name = str(timestamp) + "_nodes.csv"
         # 1. CSVからノードを読み込む
-        nodes = Node.load_from_csv(csv_name)
+        nodes = Node.load_from_csv("nodes.csv")
         
         # 2. ノードの階層構造を構築
         root_nodes = build_node_hierarchy(nodes)
@@ -85,12 +82,15 @@ def main():
         # 4. タイトルランクを更新
         for node in nodes:
             node.update_title_rank()
-            node.activate()
             
         # 5. ボーナスを計算
         calculate_all_bonuses(nodes)
         
-        # 6. 結果を保存
+        # 6. 全てのノードをアクティブにする。
+        for node in nodes:
+            node.activate()
+        
+        # 7. 結果を保存
         timestamp = int(time.time())
         save_results(nodes, timestamp)
         
