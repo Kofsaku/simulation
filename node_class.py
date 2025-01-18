@@ -4,26 +4,26 @@ import csv
 
 @dataclass
 class Node:
-    name: str
-    position_number: int
-    bank_number: int = 0
-    active: bool = True
-    parent_node: Optional[str] = None
-    tree_number: int = 0
-    title_rank: int = 0
-    past_title_rank: int = 0
-    paid_point: int = 0
-    bonus_point: int = 0
-    total_paid_point: int = 0
-    total_bonus_point: int = 0
-    children: List['Node'] = field(default_factory=list)
+    name: str #会員の名前。入力必須。
+    position_number: int #ポジション数。入力必須。
+    bank_number: int = 0 #バンクを何個持ってるか。
+    active: bool = True #アクティブか否か。入力必須。
+    parent_node: Optional[str] = None #誰に紹介されたか。入力必須。
+    tree_number: int = 0 #自分を含め、直１以下に何人いるか。人数。
+    title_rank: int = 0 #現在のタイトルは何か
+    past_title_rank: int = 0 #一個前のタイトルは何か
+    paid_point: int = 0 #会員が支払った金額、つまり売り上げ。現在は固定で20,790円支払うように設定している。入力必須。
+    bonus_point: int = 0 #ボーナスの金額。ボーナス計算の時に使う。
+    total_paid_point: int = 0 #売り上げ合計
+    total_bonus_point: int = 0 #ボーナス合計
+    children: List['Node'] = field(default_factory=list) #直１のリスト
     # 新しい変数を追加
-    binary_number_1: int = 0
-    binary_number_3: int = 0
-    binary_number_5: int = 0
-    binary_number_7: int = 0
+    binary_number_1: int = 0 #ポジション１の時のバイナリーのサイズ。
+    binary_number_3: int = 0 #ポジション３の時の２個目のバイナリーのサイズ。
+    binary_number_5: int = 0 #ポジション５の時の３個目のバイナリーのサイズ。
+    binary_number_7: int = 0 #ポジション７の時の４個目のバイナリーのサイズ。
 
-    def process_bank_number(self, node1: 'Node', node2: 'Node') -> None:
+    def process_bank_number(self, node1: 'Node', node2: 'Node') -> None: #バンクナンバーを足したり引いたりするメソッド
         """bank_number処理を実行"""
         if not node1 or not node2:
             return
@@ -31,29 +31,31 @@ class Node:
         tree1 = node1.tree_number
         tree2 = node2.tree_number
         
-        if tree1 != tree2:
+        #tree1とtree2は右側と左側を指しています。
+        
+        if tree1 != tree2: #右側と左側の数が違うとき、バンクナンバーを使って、バイナリーのサイズを大きくする。
             # bank_numberを使って tree_number を調整
-            while self.bank_number > 0 and tree2 < tree1:
+            while self.bank_number > 0 and tree2 < tree1: #バンクナンバーが１か２の時に大きさを調整する。
                 tree2 += 1
-                self.bank_number -= 1
+                self.bank_number -= 1 #大きさを調整したら、バンクナンバーを１減らす
                 
             # 差分をbank_numberに貯蔵（最大2まで）
-            diff = min(tree1 - tree2, 2)
+            diff = min(tree1 - tree2, 2) #右側と左側の二つの差を計算し、バンクナンバーに
             if diff > 0:
                 self.bank_number = min(self.bank_number + diff, 2)
 
-    def calculate_binary_numbers(self) -> None:
+    def calculate_binary_numbers(self) -> None: #ポジション数に応じてバイナリーのサイズを計算する。
         """バイナリーの大きさを計算"""
         active_children = sorted(
             [child for child in self.children if child.active],
             key=lambda x: x.tree_number,
             reverse=True
         )
-        
+        #まずは、直１を会員のtree_number数に応じてソートする。
         if not active_children:
             return
 
-        if self.position_number >= 1 and len(active_children) >= 2:
+        if self.position_number >= 1 and len(active_children) >= 2: #一番大きい直１会員と二番目に大きい直２会員をとってきて、バンクナンバー処理して、バイナリーのサイズを計算する。
             node1, node2 = active_children[0:2]
             self.binary_number_1 = (min(node1.tree_number, node2.tree_number) - 1) * 2
             self.process_bank_number(node1, node2)
@@ -73,7 +75,7 @@ class Node:
             self.binary_number_7 = (min(node7.tree_number, node8.tree_number) - 1) * 2
             self.process_bank_number(node7, node8)
 
-    def activate(self) -> None:
+    def activate(self) -> None: #会員をアクティブにするメソッド。定額で20,790円支払うことにしている。支払額は手動入力ですね。
         """ノードをアクティブ化し、必要なポイントを支払う"""
         self.paid_point += 20790
         self.total_paid_point += 20790
@@ -112,8 +114,8 @@ class Node:
             if tree_size >= tree_req and active_children >= children_req:
                 self.title_rank = rank
 
-    def calculate_bonus1(self) -> int:
-        """更新されたボーナス1の計算"""
+    def calculate_riseup_binary_bonus(self) -> int:
+        """更新されたバイナリーボーナスの計算"""
         def calculate_bonus_for_binary(binary_number: int) -> float:
             if 4 <= binary_number <= 60:
                 return 3000 * binary_number / 4
@@ -139,8 +141,8 @@ class Node:
             
         return int(bonus)
 
-    def calculate_bonus2(self) -> int:
-        """更新されたボーナス2の計算"""
+    def calculate_product_free_bonus(self) -> int:
+        """更新された製品無料ボーナスの計算"""
         def calculate_bonus_for_binary(binary_number: int) -> int:
             if binary_number == 4:
                 return 10000
@@ -164,37 +166,37 @@ class Node:
             
         return bonus
 
-    def calculate_bonus3(self) -> int:
-        """ボーナス3の計算"""
+    def calculate_matching_bonus(self) -> int:
+        """マッチングボーナスの計算"""
         bonus = 0
         for child in self.children:
             if child.active:
                 # 子ノードからの15%
-                bonus += child.calculate_bonus2() * 0.15
+                bonus += child.calculate_product_free_bonus() * 0.15
                 # 孫ノードからの5%
                 for grandchild in child.children:
                     if grandchild.active:
-                        bonus += grandchild.calculate_bonus2() * 0.05
+                        bonus += grandchild.calculate_product_free_bonus() * 0.05
                         # ひ孫ノードからの5%
                         for great_grandchild in grandchild.children:
                             if great_grandchild.active:
-                                bonus += great_grandchild.calculate_bonus2() * 0.05
+                                bonus += great_grandchild.calculate_product_free_bonus() * 0.05
         return int(bonus)
 
-    def calculate_bonus4(self) -> int:
-        """ボーナス4の計算"""
+    def calculate_car_bonus(self) -> int:
+        """車ボーナスの計算"""
         if self.title_rank >= 3 and self.past_title_rank >= 3:
             return 100000
         return 0
 
-    def calculate_bonus5(self) -> int:
-        """ボーナス5の計算"""
+    def calculate_house_bonus(self) -> int:
+        """住宅ボーナスの計算"""
         if self.title_rank >= 4 and self.past_title_rank >= 4:
             return 150000
         return 0
 
-    def calculate_bonus6(self, total_paid_points: int) -> int:
-        """ボーナス6の計算"""
+    def calculate_sharing_bonus(self, total_paid_points: int) -> int:
+        """シェアリングボーナスの計算"""
         if self.title_rank == 2:
             return int(total_paid_points * 0.01)
         elif self.title_rank >= 3:
@@ -303,16 +305,31 @@ class Node:
                 'name', 'position_number', 'bank_number', 'active',
                 'parent_node', 'tree_number', 'title_rank', 'past_title_rank',
                 'paid_point', 'bonus_point', 'total_paid_point', 'total_bonus_point',
-                'binary_number_1', 'binary_number_3', 'binary_number_5', 'binary_number_7'
+                'binary_number_1', 'binary_number_3', 'binary_number_5', 'binary_number_7',
+                'riseup_binary_bonus', 'product_free_bonus', 'matching_bonus',
+                'car_bonus', 'house_bonus', 'sharing_bonus'
             ])
+            
+            total_paid_points = sum(node.paid_point for node in nodes)
+            
             for node in nodes:
+                # 各ボーナスを計算
+                riseup_binary_bonus = node.calculate_riseup_binary_bonus()
+                product_free_bonus = node.calculate_product_free_bonus()
+                matching_bonus = node.calculate_matching_bonus()
+                car_bonus = node.calculate_car_bonus()
+                house_bonus = node.calculate_house_bonus()
+                sharing_bonus = node.calculate_sharing_bonus(total_paid_points)
+                
                 writer.writerow([
                     node.name, node.position_number, node.bank_number,
                     node.active, node.parent_node, node.tree_number,
                     node.title_rank, node.past_title_rank, node.paid_point,
                     node.bonus_point, node.total_paid_point, node.total_bonus_point,
                     node.binary_number_1, node.binary_number_3, node.binary_number_5,
-                    node.binary_number_7
+                    node.binary_number_7,
+                    riseup_binary_bonus, product_free_bonus, matching_bonus,
+                    car_bonus, house_bonus, sharing_bonus
                 ])
 
     @classmethod
