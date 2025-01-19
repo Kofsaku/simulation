@@ -67,7 +67,7 @@ def update_tree_numbers(node: Node) -> None:
 
 if __name__ == "__main__":
     # 設定パラメータ
-    layer_config = [1, 2, 3, 4, 5, 6, 7, 8, 9]  # 各層のノード数設定
+    layer_config = [1, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]  # 各層のノード数設定
 
     # 1. ランダムなノード群を作成
     nodes = create_random_nodes(layer_config)
