@@ -2,7 +2,7 @@ import time
 from typing import List, Dict, Tuple
 from node_class import Node
 
-def build_node_hierarchy(nodes: List[Node]) -> List[Node]:
+def build_node_hierarchy(nodes: List[Node]) -> List[Node]: #全会員の親子関係を作る関数。直１と始祖会員を計算する。
     """ノードの親子関係を構築し、ルートノードのリストを返す"""
     node_dict = {node.name: node for node in nodes}
     root_nodes = []
@@ -18,7 +18,7 @@ def build_node_hierarchy(nodes: List[Node]) -> List[Node]:
 
     return root_nodes
 
-def calculate_all_bonuses(nodes: List[Node]) -> Dict[str, Tuple[int, int]]:
+def calculate_all_bonuses(nodes: List[Node]) -> Dict[str, Tuple[int, int]]: #ボーナスを計算する関数。
     """全ノードのボーナスを計算し、種類別の合計金額と発生件数を返す"""
     # 全ノードの支払いポイントの合計を計算
     total_paid_points = sum(node.paid_point for node in nodes)
@@ -62,7 +62,7 @@ def calculate_all_bonuses(nodes: List[Node]) -> Dict[str, Tuple[int, int]]:
 
     return bonus_summary
 
-def save_results(nodes: List[Node], bonus_summary: Dict[str, Tuple[int, int]], iteration: int) -> None:
+def save_results(nodes: List[Node], bonus_summary: Dict[str, Tuple[int, int]], iteration: int) -> None: #CSVに結果を保存する関数。
     """結果をCSVファイルに保存"""
     # ノードの状態を保存
     node_filename = f"{iteration}_nodes.csv"
@@ -87,35 +87,43 @@ def save_results(nodes: List[Node], bonus_summary: Dict[str, Tuple[int, int]], i
         f.write(f"\nall_seasons_total_paid,{total_paid_all},N/A\n")
         f.write(f"all_seasons_total_bonus,{total_bonus_all},N/A\n")
 
-def main():
+def main(): #メインの処理を行う関数。
     # シミュレーションのパラメータ
-    num_simulations = 1  # シミュレーション回数
+    num_simulations = 2  # シミュレーション回数。何シーズン計算するか。今回は２シーズンシュミレーションする。
 
     for sim in range(num_simulations):
         print(f"Starting simulation {sim + 1}")
         
         # 1. CSVからノードを読み込む
-        nodes = Node.load_from_csv("nodes.csv")
-        
+        if sim == 0:
+            nodes = Node.load_from_csv("nodes.csv")
+        else:
+            nodes = Node.load_from_csv(f"{timestamp}_nodes.csv")
         # 2. ノードの階層構造を構築
         root_nodes = build_node_hierarchy(nodes)
         
-        # 3. 各ルートノードからツリーを構築
+        # 3. 各ルートノードから念のためツリーを構築
         for root in root_nodes:
             root.arrange_tree()
             
-        # 4. タイトルランクを更新
+        # 4. タイトルランクを更新。
         for node in nodes:
             node.update_title_rank()
             
         # 5. ボーナスを計算し、サマリーを取得
         bonus_summary = calculate_all_bonuses(nodes)
         
-        # 6. 全てのノードをアクティブにする
+        # 6. 全てのノードをアクティブにする。これにより、２シーズン目以降は全会員がアクティブな状態になる。テスト用。アクティブかどうかは手動で入力するしかない。
         for node in nodes:
             node.activate()
         
-        # 7. 結果を保存
+        # 7. アクティブなノードのみバイナリーのサイズを計算する。（更新する）
+        for node in nodes:
+            if not node.active:
+                continue
+            node.calculate_binary_numbers()
+
+        # 8. 結果を保存。csvで出力する。
         timestamp = int(time.time())
         save_results(nodes, bonus_summary, timestamp)
         
