@@ -81,7 +81,7 @@ class Node:
         self.total_paid_point += 20790
         self.active = True
 
-    def set_position(self, position: int) -> None:
+    def set_position(self, position: int) -> None: #ポジション数に応じて、会員が支払っているであろう金額を自動で計算する。まあ本番環境は使わないでしょう。
         """ポジション番号を設定し、必要なポイントを支払う"""
         position_costs = {1: 41580, 3: 82060, 5: 122540, 7: 163020}
         if position in position_costs:
@@ -89,7 +89,7 @@ class Node:
             self.paid_point += position_costs[position]
             self.total_paid_point += position_costs[position]
 
-    def calculate_tree_number(self) -> int:
+    def calculate_tree_number(self) -> int: #自分自身以下の会員が何人いるか計算する。tree_numberと名付けている。
         """ツリー内のノード総数を計算"""
         count = 1  # 自分自身をカウント
         for child in self.children:
@@ -97,24 +97,24 @@ class Node:
                 count += child.calculate_tree_number()
         return count
 
-    def update_title_rank(self) -> None:
+    def update_title_rank(self) -> None: #タイトルランクを自動で更新するメソッド。現在のランクをpast_title_rankに入れてから、title_rankを更新する。
         """タイトルランクを更新"""
         tree_size = self.calculate_tree_number()
         active_children = len([child for child in self.children if child.active])
 
         rank_conditions = [
-            (20, 2, 0), (60, 3, 1), (200, 4, 2),
-            (600, 5, 3), (1000, 7, 4), (2000, 10, 5),
-            (4000, 10, 6), (6000, 10, 7), (10000, 10, 8),
-            (20000, 10, 9)
-        ]
+            (20, 2, 1), (60, 3, 2), (200, 4, 3),
+            (600, 5, 4), (1000, 7, 5), (2000, 10, 6),
+            (4000, 10, 7), (6000, 10, 8), (10000, 10, 9),
+            (20000, 10, 10)
+        ] #一番右の数字がタイトルランクを示している。左がtree_number、真ん中が直1。タイトルの条件値になっている。
         self.past_title_rank = self.title_rank
         self.title_rank = 0
         for tree_req, children_req, rank in rank_conditions:
             if tree_size >= tree_req and active_children >= children_req:
                 self.title_rank = rank
 
-    def calculate_riseup_binary_bonus(self) -> int:
+    def calculate_riseup_binary_bonus(self) -> int: #ライズアップボーナスを計算する。バイナリーナンバーを使います。
         """更新されたバイナリーボーナスの計算"""
         def calculate_bonus_for_binary(binary_number: int) -> float:
             if 4 <= binary_number <= 60:
@@ -129,7 +129,7 @@ class Node:
                 return 3000 * 15 + 4000 * 35 + 5000 * 450 + 2000 * 4500
             return 0
 
-        bonus = 0
+        bonus = 0 #ポジション数に応じて計算する。position_numberが増えると何度もボーナスが加算される。
         if self.position_number >= 1:
             bonus += calculate_bonus_for_binary(self.binary_number_1)
         if self.position_number >= 3:
@@ -141,7 +141,7 @@ class Node:
             
         return int(bonus)
 
-    def calculate_product_free_bonus(self) -> int:
+    def calculate_product_free_bonus(self) -> int: #プロダクトフリーボーナスを計算する。
         """更新された製品無料ボーナスの計算"""
         def calculate_bonus_for_binary(binary_number: int) -> int:
             if binary_number == 4:
@@ -154,7 +154,7 @@ class Node:
                 return 1000
             return 0
 
-        bonus = 0
+        bonus = 0 #ポジション数に応じて計算する。position_numberが増えると何度もボーナスが加算される。
         if self.position_number >= 1:
             bonus += calculate_bonus_for_binary(self.binary_number_1)
         if self.position_number >= 3:
@@ -166,7 +166,7 @@ class Node:
             
         return bonus
 
-    def calculate_matching_bonus(self) -> int:
+    def calculate_matching_bonus(self) -> int: #マッチングボーナスの計算。
         """マッチングボーナスの計算"""
         bonus = 0
         for child in self.children:
@@ -183,27 +183,27 @@ class Node:
                                 bonus += great_grandchild.calculate_product_free_bonus() * 0.05
         return int(bonus)
 
-    def calculate_car_bonus(self) -> int:
+    def calculate_car_bonus(self) -> int: #カーボーナスの計算。title_rankとpast_title_rankを使う。今回は条件を満たしていれば、満額もらえるようにしている。
         """車ボーナスの計算"""
-        if self.title_rank >= 3 and self.past_title_rank >= 3:
+        if self.title_rank >= 4 and self.past_title_rank >= 4:
             return 100000
         return 0
 
-    def calculate_house_bonus(self) -> int:
+    def calculate_house_bonus(self) -> int: #ハウスボーナスの計算。title_rankとpast_title_rankを使う。今回は条件を満たしていれば、満額もらえるようにしている。
         """住宅ボーナスの計算"""
-        if self.title_rank >= 4 and self.past_title_rank >= 4:
+        if self.title_rank >= 5 and self.past_title_rank >= 5:
             return 150000
         return 0
 
-    def calculate_sharing_bonus(self, total_paid_points: int) -> int:
+    def calculate_sharing_bonus(self, total_paid_points: int) -> int: #シェアリングボーナスの計算。
         """シェアリングボーナスの計算"""
-        if self.title_rank == 2:
+        if self.title_rank == 3:
             return int(total_paid_points * 0.01)
-        elif self.title_rank >= 3:
+        elif self.title_rank >= 4:
             return int(total_paid_points * 0.002)
         return 0
 
-    def arrange_tree(self) -> None:
+    def arrange_tree(self) -> None: #ポジション数に応じてバイナリーを作るメソッド。
         """ツリー構造を構築"""
         if not self.active:
             return
@@ -270,7 +270,7 @@ class Node:
         ]
         self._balance_columns(columns)
 
-    def _balance_columns(self, columns: List[List['Node']]) -> None:
+    def _balance_columns(self, columns: List[List['Node']]) -> None: #binary_numberを導入する前に作ったやつ。
         """列のバランスを取り、bank_numberを更新"""
         # 列の数を計算
         column_sizes = [len(col) for col in columns]
@@ -297,7 +297,7 @@ class Node:
         self.bank_number = min(self.bank_number + total_diff, 2)
 
     @classmethod
-    def save_to_csv(cls, nodes: List['Node'], filename: str) -> None:
+    def save_to_csv(cls, nodes: List['Node'], filename: str) -> None: #ＣＳＶに保存するメソッド。
         """更新されたCSV保存機能"""
         with open(filename, 'w', newline='') as f:
             writer = csv.writer(f)
@@ -333,7 +333,7 @@ class Node:
                 ])
 
     @classmethod
-    def load_from_csv(cls, filename: str) -> List['Node']:
+    def load_from_csv(cls, filename: str) -> List['Node']: #ＣＳＶを読み込むメソッド。
         """更新されたCSV読み込み機能"""
         nodes = []
         with open(filename, 'r') as f:
