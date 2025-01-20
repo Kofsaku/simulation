@@ -298,70 +298,6 @@ class Node:
         # 最大2個までbank_numberに加算
         self.bank_number = min(self.bank_number + total_diff, 2)
 
-    @classmethod
-    def save_to_csv(cls, nodes: List['Node'], filename: str) -> None: #ＣＳＶに保存するメソッド。
-        """更新されたCSV保存機能"""
-        with open(filename, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                'name', 'position_number', 'bank_number', 'active',
-                'parent_node', 'tree_number', 'title_rank', 'past_title_rank',
-                'paid_point', 'bonus_point', 'total_paid_point', 'total_bonus_point',
-                'binary_number_1', 'binary_number_3', 'binary_number_5', 'binary_number_7',
-                'riseup_binary_bonus', 'product_free_bonus', 'matching_bonus',
-                'car_bonus', 'house_bonus', 'sharing_bonus'
-            ])
-            
-            total_paid_points = sum(node.paid_point for node in nodes)
-            
-            for node in nodes:
-                # 各ボーナスを計算
-                riseup_binary_bonus = node.calculate_riseup_binary_bonus()
-                product_free_bonus = node.calculate_product_free_bonus()
-                matching_bonus = node.calculate_matching_bonus()
-                car_bonus = node.calculate_car_bonus()
-                house_bonus = node.calculate_house_bonus()
-                sharing_bonus = node.calculate_sharing_bonus(total_paid_points)
-                
-                writer.writerow([
-                    node.name, node.position_number, node.bank_number,
-                    node.active, node.parent_node, node.tree_number,
-                    node.title_rank, node.past_title_rank, node.paid_point,
-                    node.bonus_point, node.total_paid_point, node.total_bonus_point,
-                    node.binary_number_1, node.binary_number_3, node.binary_number_5,
-                    node.binary_number_7,
-                    riseup_binary_bonus, product_free_bonus, matching_bonus,
-                    car_bonus, house_bonus, sharing_bonus
-                ])
-
-    @classmethod
-    def load_from_csv(cls, filename: str) -> List['Node']: #ＣＳＶを読み込むメソッド。
-        """更新されたCSV読み込み機能"""
-        nodes = []
-        with open(filename, 'r') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                node = cls(
-                    name=row['name'],
-                    position_number=int(row['position_number']),
-                    bank_number=int(row['bank_number']),
-                    active=row['active'].lower() == 'true',
-                    parent_node=row['parent_node'] if row['parent_node'] else None,
-                    tree_number=int(row['tree_number']),
-                    title_rank=int(row['title_rank']),
-                    past_title_rank=int(row['past_title_rank']),
-                    paid_point=int(row['paid_point']),
-                    bonus_point=int(row['bonus_point']),
-                    total_paid_point=int(row['total_paid_point']),
-                    total_bonus_point=int(row['total_bonus_point']),
-                    binary_number_1=int(row['binary_number_1']),
-                    binary_number_3=int(row['binary_number_3']),
-                    binary_number_5=int(row['binary_number_5']),
-                    binary_number_7=int(row['binary_number_7'])
-                )
-                nodes.append(node)
-        return nodes
-
 def create_random_nodes(num_layers: List[int]) -> List[Node]:
     """
     ランダムなノード群を作成
@@ -400,7 +336,6 @@ def create_random_nodes(num_layers: List[int]) -> List[Node]:
 
     return nodes
 
-
 def build_node_hierarchy(nodes: List[Node]) -> List[Node]: #全会員の親子関係を作る関数。直１と始祖会員を計算する。
     """ノードの親子関係を構築し、ルートノードのリストを返す"""
     node_dict = {node.name: node for node in nodes}
@@ -423,7 +358,6 @@ def update_tree_numbers(node: Node) -> None:
     for child in node.children:
         if child.active:
             update_tree_numbers(child)
-
 
 def calculate_all_bonuses(nodes: List[Node]) -> Dict[str, Tuple[int, int]]: #ボーナスを計算する関数。
     """全ノードのボーナスを計算し、種類別の合計金額と発生件数を返す"""
@@ -468,31 +402,6 @@ def calculate_all_bonuses(nodes: List[Node]) -> Dict[str, Tuple[int, int]]: #ボ
         node.total_bonus_point += node.bonus_point
 
     return bonus_summary
-
-def save_results(nodes: List[Node], bonus_summary: Dict[str, Tuple[int, int]], iteration: int) -> None: #CSVに結果を保存する関数。
-    """結果をCSVファイルに保存"""
-    # ノードの状態を保存
-    node_filename = f"{iteration}_nodes.csv"
-    Node.save_to_csv(nodes, node_filename)
-
-    # ポイントサマリーを保存
-    point_filename = f"{iteration}_points.csv"
-    total_paid = sum(node.paid_point for node in nodes)
-    total_bonus = sum(node.bonus_point for node in nodes)
-    total_paid_all = sum(node.total_paid_point for node in nodes)
-    total_bonus_all = sum(node.total_bonus_point for node in nodes)
-
-    with open(point_filename, 'w') as f:
-        f.write("metric,amount,count\n")
-        f.write(f"total_paid,{total_paid},N/A\n")
-        
-        # 各ボーナスの詳細を書き出し
-        for bonus_type, (amount, count) in bonus_summary.items():
-            f.write(f"{bonus_type},{amount},{count}\n")
-        
-        f.write(f"total_bonus,{total_bonus},N/A\n")
-        f.write(f"\nall_seasons_total_paid,{total_paid_all},N/A\n")
-        f.write(f"all_seasons_total_bonus,{total_bonus_all},N/A\n")
 
 def main(): #メインの処理を行う関数。
     
