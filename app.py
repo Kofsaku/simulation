@@ -157,13 +157,13 @@ class Node:
         bonus = 0
         for child in self.children:
             if child.active:
-                bonus += child.calculate_product_free_bonus(bonus_pf) * 0.15
+                bonus += child.calculate_riseup_binary_bonus(bonus_pf) * 0.15
                 for grandchild in child.children:
                     if grandchild.active:
-                        bonus += grandchild.calculate_product_free_bonus(bonus_pf) * 0.05
+                        bonus += grandchild.calculate_riseup_binary_bonus(bonus_pf) * 0.05
                         for great_grandchild in grandchild.children:
                             if great_grandchild.active:
-                                bonus += great_grandchild.calculate_product_free_bonus(bonus_pf) * 0.05
+                                bonus += great_grandchild.calculate_riseup_binary_bonus(bonus_pf) * 0.05
         return int(bonus)
 
     def calculate_car_bonus(self) -> int:
@@ -334,7 +334,7 @@ def calculate_all_bonuses(nodes: List[Node],
         bonuses = {
             'riseup_binary_bonus': node.calculate_riseup_binary_bonus(bonus_rise_params),
             'product_free_bonus': node.calculate_product_free_bonus(bonus_pf_params),
-            'matching_bonus': node.calculate_matching_bonus(bonus_pf_params, total_paid_points),
+            'matching_bonus': node.calculate_matching_bonus(bonus_rise_params, total_paid_points),  # 修正箇所
             'car_bonus': node.calculate_car_bonus(),
             'house_bonus': node.calculate_house_bonus(),
             'sharing_bonus': node.calculate_sharing_bonus(total_paid_points)
@@ -359,7 +359,7 @@ def main():
 
     st.sidebar.header("シミュレーションパラメータ")
     # １．各層のノード数の設定（カンマ区切りで入力例：1,5,2,2,2）
-    layer_config_str = st.sidebar.text_input("各層のノード数（カンマ区切り）", value="1,5,2,2")
+    layer_config_str = st.sidebar.text_input("各層のノード数（カンマ区切り）", value="1,5,2,2,2,2,2,5")
     try:
         layer_config = [int(s.strip()) for s in layer_config_str.split(",")]
     except Exception as e:
@@ -385,7 +385,7 @@ def main():
         "level4": st.sidebar.number_input("level4 (例: 2000)", value=2000.0),
     }
 
-    st.sidebar.subheader("製品無料ボーナスの定数設定")
+    st.sidebar.subheader("プロダクトフリーボーナスの定数設定")
     bonus_pf_params = {
         "pf4": st.sidebar.number_input("pf4 (例: 10000)", value=10000, step=1000),
         "pf8": st.sidebar.number_input("pf8 (例: 7000)", value=7000, step=1000),
