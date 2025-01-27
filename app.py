@@ -286,7 +286,7 @@ def create_nodes_deterministic(layer_config: List[int], fixed_positions: List[in
                     name=f"Node_{node_counter}",
                     position_number=pos,
                     parent_node=parent.name,
-                    active=True   # 固定でアクティブ
+                    active=random.random() > 0.1
                 )
                 nodes.append(node)
                 layer_nodes[layer].append(node)
@@ -310,8 +310,7 @@ def build_node_hierarchy(nodes: List[Node]) -> List[Node]:
 def update_tree_numbers(node: Node) -> None:
     node.tree_number = node.calculate_tree_number()
     for child in node.children:
-        if child.active:
-            update_tree_numbers(child)
+        update_tree_numbers(child)
 
 def calculate_all_bonuses(nodes: List[Node],
                           bonus_rise_params: Dict[str, float],
@@ -359,7 +358,7 @@ def main():
 
     st.sidebar.header("シミュレーションパラメータ")
     # １．各層のノード数の設定（カンマ区切りで入力例：1,5,2,2,2）
-    layer_config_str = st.sidebar.text_input("各層のノード数（カンマ区切り）", value="1,5,2,2,2,2,2,5")
+    layer_config_str = st.sidebar.text_input("各層のノード数（カンマ区切り）", value="1,4,4,4,3,3,3,3,2,2")
     try:
         layer_config = [int(s.strip()) for s in layer_config_str.split(",")]
     except Exception as e:
@@ -367,7 +366,7 @@ def main():
         return
 
     # ２．各層のポジション番号（カンマ区切り、例：1,3,5,7　※層数に合わせて利用）
-    fixed_positions_str = st.sidebar.text_input("各層のポジション番号（カンマ区切り）", value="1,3,5,7")
+    fixed_positions_str = st.sidebar.text_input("各層のポジション番号（カンマ区切り）", value="7,7,5,5,5,3,3,3,1,1")
     try:
         fixed_positions = [int(s.strip()) for s in fixed_positions_str.split(",")]
     except Exception as e:
@@ -413,10 +412,6 @@ def main():
 
         for sim in range(num_simulations):
             st.write(f"#### シミュレーション {sim+1} 開始")
-            # 階層再構築
-            root_nodes = build_node_hierarchy(nodes)
-            for root in root_nodes:
-                root.arrange_tree()
             # タイトルランク更新
             for node in nodes:
                 node.update_title_rank()
