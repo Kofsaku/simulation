@@ -2,6 +2,7 @@ import time
 import streamlit as st
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass, field
+import random
 
 # ---------------------------
 # 　元ファイルのロジック（基本部分）　
@@ -69,10 +70,12 @@ class Node:
             self.binary_number_7 = (min(node7.tree_number, node8.tree_number) - 1) * 2
             self.process_bank_number(node7, node8)
 
-    def activate(self) -> None:
-        self.paid_point += 20790
-        self.total_paid_point += 20790
-        self.active = True
+    def activate(self,active_prop) -> None:
+        _active_prop = (100-active_prop)/100
+        self.active=random.random() > _active_prop
+        if self.active:
+            self.paid_point += 20790
+            self.total_paid_point += 20790
 
     def set_position(self, position: int) -> None:
         # ※ 実際の計算用であれば外部入力により費用設定も変更可能
@@ -132,15 +135,16 @@ class Node:
 
     def calculate_product_free_bonus(self, bonus_pf: Dict[str, int]) -> int:
         def calculate_bonus_for_binary(binary_number: int) -> int:
-            if binary_number == 4:
+            if binary_number >= 4 and binary_number < 8:
                 return bonus_pf["pf4"]
-            elif binary_number == 8:
+            elif binary_number >= 8 and binary_number < 12:
                 return bonus_pf["pf8"]
-            elif binary_number == 12:
+            elif binary_number >= 12 and binary_number < 16:
                 return bonus_pf["pf12"]
             elif binary_number == 16:
                 return bonus_pf["pf16"]
-            return 0
+            else:
+                return 0
 
         bonus = 0
         if self.position_number >= 1:
@@ -183,76 +187,10 @@ class Node:
             return int(total_paid_points * 0.002)
         return 0
 
-    def arrange_tree(self) -> None:
-        if not self.active:
-            return
-        active_children = [child for child in self.children if child.active]
-        active_children.sort(key=lambda x: x.calculate_tree_number(), reverse=True)
-        if self.position_number == 1:
-            self._arrange_position1(active_children)
-        elif self.position_number == 3:
-            self._arrange_position3(active_children)
-        elif self.position_number == 5:
-            self._arrange_position5(active_children)
-        elif self.position_number == 7:
-            self._arrange_position7(active_children)
-
-    def _arrange_position1(self, children: List['Node']) -> None:
-        if len(children) < 2:
-            return
-        columns = [children[0:1], children[1:2]]
-        self._balance_columns(columns)
-
-    def _arrange_position3(self, children: List['Node']) -> None:
-        if len(children) < 4:
-            return
-        columns = [
-            children[0:1], children[1:2],
-            children[2:3], children[3:4]
-        ]
-        self._balance_columns(columns)
-
-    def _arrange_position5(self, children: List['Node']) -> None:
-        if len(children) < 6:
-            return
-        columns = [
-            children[0:1], children[1:2],
-            children[2:3], children[3:4],
-            children[4:5], children[5:6]
-        ]
-        self._balance_columns(columns)
-
-    def _arrange_position7(self, children: List['Node']) -> None:
-        if len(children) < 8:
-            return
-        columns = [
-            children[0:1], children[1:2],
-            children[2:3], children[3:4],
-            children[4:5], children[5:6],
-            children[6:7], children[7:8]
-        ]
-        self._balance_columns(columns)
-
-    def _balance_columns(self, columns: List[List['Node']]) -> None:
-        column_sizes = [len(col) for col in columns]
-        min_size = min(column_sizes)
-        max_size = max(column_sizes)
-        if self.bank_number > 0:
-            for i in range(len(columns)):
-                if column_sizes[i] < max_size and self.bank_number > 0:
-                    column_sizes[i] += 1
-                    self.bank_number -= 1
-        total_diff = 0
-        for i in range(len(columns)):
-            if column_sizes[i] > min_size:
-                diff = column_sizes[i] - min_size
-                total_diff += diff
-        self.bank_number = min(self.bank_number + total_diff, 2)
-
 # ---------------------------
 #　ノード作成・ツリー構築用関数（外部入力可能に変更）
 # ---------------------------
-def create_nodes_deterministic(layer_config: List[int], fixed_positions: List[int]) -> List[Node]:
+def create_nodes_deterministic(layer_config: List[int], fixed_positions: List[int], active_prop) -> List[Node]:
     """
     ランダムではなく、固定値を用いてノード群を作成する例。
     layer_config: 各層のノード数のリスト 例：[1, 5, 2, …]
@@ -262,6 +200,7 @@ def create_nodes_deterministic(layer_config: List[int], fixed_positions: List[in
     nodes = []
     node_counter = 1
     layer_nodes = {0: []}
+    _active_prop = (100-active_prop)/100
     
     # ルート層（層0）の作成
     for i in range(layer_config[0]):
@@ -286,7 +225,7 @@ def create_nodes_deterministic(layer_config: List[int], fixed_positions: List[in
                     name=f"Node_{node_counter}",
                     position_number=pos,
                     parent_node=parent.name,
-                    active=True   # 固定でアクティブ
+                    active=random.random() > _active_prop
                 )
                 nodes.append(node)
                 layer_nodes[layer].append(node)
@@ -310,8 +249,7 @@ def build_node_hierarchy(nodes: List[Node]) -> List[Node]:
 def update_tree_numbers(node: Node) -> None:
     node.tree_number = node.calculate_tree_number()
     for child in node.children:
-        if child.active:
-            update_tree_numbers(child)
+        update_tree_numbers(child)
 
 def calculate_all_bonuses(nodes: List[Node],
                           bonus_rise_params: Dict[str, float],
@@ -359,7 +297,7 @@ def main():
 
     st.sidebar.header("シミュレーションパラメータ")
     # １．各層のノード数の設定（カンマ区切りで入力例：1,5,2,2,2）
-    layer_config_str = st.sidebar.text_input("各層のノード数（カンマ区切り）", value="1,5,2,2,2,2,2,5")
+    layer_config_str = st.sidebar.text_input("各層のノード数（カンマ区切り）", value="1,4,4,4,3,3,3,3,2,2")
     try:
         layer_config = [int(s.strip()) for s in layer_config_str.split(",")]
     except Exception as e:
@@ -367,7 +305,7 @@ def main():
         return
 
     # ２．各層のポジション番号（カンマ区切り、例：1,3,5,7　※層数に合わせて利用）
-    fixed_positions_str = st.sidebar.text_input("各層のポジション番号（カンマ区切り）", value="1,3,5,7")
+    fixed_positions_str = st.sidebar.text_input("各層のポジション番号（カンマ区切り）", value="7,5,5,3,3,3,1,1,1,1")
     try:
         fixed_positions = [int(s.strip()) for s in fixed_positions_str.split(",")]
     except Exception as e:
@@ -376,6 +314,9 @@ def main():
 
     # ３．シミュレーション回数
     num_simulations = st.sidebar.number_input("シミュレーション回数", min_value=1, value=2, step=1)
+    
+    # ４．会員がアクティブになる確率（％）,10～100の整数を入力してください。
+    active_prop = st.sidebar.number_input("会員がアクティブになる確率（％）",min_value=10,max_value=100,value=90)
 
     st.sidebar.subheader("ライズアップボーナスの定数設定")
     bonus_rise_params = {
@@ -397,10 +338,10 @@ def main():
     if st.sidebar.button("計算開始"):
         st.write("シミュレーション実行中・・・")
         # 固定値を用いてノード群を作成（乱数は使わず同じ設定となる）
-        nodes = create_nodes_deterministic(layer_config, fixed_positions)
+        nodes = create_nodes_deterministic(layer_config, fixed_positions, active_prop)
         # 親子関係の構築
         root_nodes = build_node_hierarchy(nodes)
-        # ツリー番号の更新
+        # ツリー番号を計算する。
         for root in root_nodes:
             update_tree_numbers(root)
         # 初期のバイナリー計算
@@ -413,10 +354,6 @@ def main():
 
         for sim in range(num_simulations):
             st.write(f"#### シミュレーション {sim+1} 開始")
-            # 階層再構築
-            root_nodes = build_node_hierarchy(nodes)
-            for root in root_nodes:
-                root.arrange_tree()
             # タイトルランク更新
             for node in nodes:
                 node.update_title_rank()
@@ -427,9 +364,16 @@ def main():
             st.write("**各ボーナス内訳 [合計金額, 件数]:**")
             st.json(bonus_summary)
             st.write(f"**総ボーナス金額: {total_bonus}**")
-            # 次回シミュレーション用に全ノードをアクティブ化＆再計算
+            # 次回シミュレーション用に全ノードを確率に応じてアクティブ化＆再計算
             for node in nodes:
                 node.activate()
+                for child in node.children:
+                    child.activate()
+            root_nodes = build_node_hierarchy(nodes)
+            # ツリー番号の更新
+            for root in root_nodes:
+                update_tree_numbers(root)
+            # バイナリーナンバーの更新
             for node in nodes:
                 if node.active:
                     node.calculate_binary_numbers()
