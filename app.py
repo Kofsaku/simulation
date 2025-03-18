@@ -366,9 +366,9 @@ def main():
             st.write(f"**総ボーナス金額: {total_bonus}**")
             # 次回シミュレーション用に全ノードを確率に応じてアクティブ化＆再計算
             for node in nodes:
-                node.activate()
+                node.activate(active_prop)
                 for child in node.children:
-                    child.activate()
+                    child.activate(active_prop)
             root_nodes = build_node_hierarchy(nodes)
             # ツリー番号の更新
             for root in root_nodes:
